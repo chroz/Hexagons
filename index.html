@@ -1,0 +1,301 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="apple-touch-icon" href="apple-touch-icon.png">
+        <!-- Place favicon.ico in the root directory -->
+
+        <link rel="stylesheet" href="css/normalize.css">
+        <link rel="stylesheet" href="css/main.css">
+        <script src="js/vendor/modernizr-2.8.3.min.js"></script>
+        <script src="script/dist/paper-full.js"></script>
+    </head>
+    <body>
+     <!-- Define inlined PaperScript associate it with myCanvas -->
+
+        <canvas id="myCanvas" resize width="600" height="600"></canvas>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.11.3.min.js"><\/script>')</script>
+        <script src="js/plugins.js"></script>
+        <script src="js/main.js"></script>
+
+        <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
+        <script>
+            (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
+            function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
+            e=o.createElement(i);r=o.getElementsByTagName(i)[0];
+            e.src='https://www.google-analytics.com/analytics.js';
+            r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
+            ga('create','UA-XXXXX-X','auto');ga('send','pageview');
+        </script>
+
+    <script type="text/paperscript" canvas="myCanvas">
+
+
+    var radius = 40;
+    
+    var COLOR1 = 0;
+    var COLOR2 = 1;
+    var COLOR3 = 2;
+    var COLOR4 = 3;
+    var COLOR5 = 5; 
+
+    var colors = [new Color(1,0,0), new Color (0,1,0), new Color(0,0,1), new Color(1,1,0), new Color(1,0,1)];
+   
+
+    function hex () {
+  
+      var decahedron = new Path.RegularPolygon(new Point(0, 0), 6, radius);
+         decahedron.fillColor = '#e9e9ff';
+      return decahedron; 
+
+    }
+
+
+    var hexagons = [];
+    var width = 7;
+    var height = 7; 
+
+    var marked = [];
+    var board = [];
+
+    var x = radius;
+    var y = radius;
+
+    // Avstand fra sentrum til kanten på hexagonet (ikke hjørnet)
+     
+    var edge_distance = Math.sqrt(radius*radius - (radius/2) * (radius/2));
+
+    var xoff = edge_distance;
+    var yoff = radius;
+
+    function getAbsolutePos(x,y) {
+
+      var xoff = edge_distance;
+      if (y%2==1) {
+        xoff = 2*edge_distance;
+      }
+      return { x : xoff + edge_distance*2*x, y: yoff + radius*1.5*y};
+    }
+
+
+
+    for (var y =0; y<height; y++) {
+      
+      xoff = edge_distance;
+      if (y%2==1) {
+        xoff = 2*edge_distance;
+      }
+      
+      for (var x=0; x<width; x++) {
+        var h = hex();
+        var coords = getAbsolutePos(x,y);
+
+        h.position.x = coords.x;
+        h.position.y = coords.y;
+
+        board[y*width+x] = h; //[h.position.x, h.position.y];
+
+        h.x = x;
+        h.y = y;
+
+        h.strokeColor = new Color (0,0,0)
+        h.strokeWidth = 2;
+        h.color = Math.floor(Math.random()*colors.length);
+        h.fillColor = colors[h.color]; 
+        h.shadowColor = new Color(0, 0, 0);
+        h.shadowBlur = 12;
+        h.shadowOffset = new Point(5, 5);
+
+
+        h.onMouseDown = function (e) {
+          mark(this);
+        }
+    
+        h.onMouseEnter = function (e){
+          if (dragging) {
+            mark(this);
+          }
+        };
+
+        hexagons.push(h);
+     }  
+   }
+
+   function mark(hexagon) {
+     hexagon.fillColor = new Color(.7,.7,.3);
+     marked.push (hexagon);
+   }
+
+   function removeFromBoard () {
+     $(marked).each(function (i,e) {
+       e.remove();
+     });
+     fillBoard();
+   }
+
+   function fillBoard() {
+     
+     var a = marked[marked.length-1];
+     var b = marked[marked.length-2];
+
+     var x0 = a.position.x
+     var y0 = a.position.y;
+     
+     var x1 = b.position.x
+     var y1 = b.position.y;
+     
+
+     if (y1 > y0) {
+       if (x1 > x0)
+          dir = 'NW';
+       else
+         dir = 'NE';
+     } else if (y1 == y0) {
+       if (x1 > x0)
+          dir = 'W';
+       else
+         dir = 'E';
+     } else {
+       if (x1 > x0)
+          dir = 'SW';
+       else
+         dir = 'SE';
+     }
+  
+     //Begynner med første hexagon i lista
+
+     var first = marked[0];
+
+     var x0 = first.x;
+     var y0 = first.y;
+    
+     var amount = 1;
+
+     function blankSpaces(hexagon) {
+        
+        for (var i=0; i< marked.length; i++) {
+            var tile = marked[i];
+            if (tile.y == hexagon.y && hexagon.x + 1 == tile.x) {
+                amount++;
+                if (!blankSpaces(tile)) {
+                    return false;
+                }
+            }
+        }
+        return false;
+     }
+
+     function getHex (x,y) {
+        if (x < 0 || x >= width) return false;
+        return board[y*width+x];
+     }
+
+     function createHex (x,y) {
+        var h = hex();
+        var coords = getAbsolutePos(x,y);
+
+        h.position.x = coords.x;
+        h.position.y = coords.y;
+
+        board[y*width+x] = h;
+
+        h.x = x;
+        h.y = y;
+
+        h.strokeColor = new Color (0,0,0)
+        h.strokeWidth = 2;
+        h.color = Math.floor(Math.random()*colors.length);
+        h.fillColor = colors[h.color]; 
+        h.shadowColor = new Color(0, 0, 0);
+        h.shadowBlur = 12;
+        h.shadowOffset = new Point(5, 5);
+
+
+        h.onMouseDown = function (e) {
+          mark(this);
+        }
+    
+        h.onMouseEnter = function (e){
+          if (dragging) {
+            mark(this);
+          }
+        };
+
+        hexagons.push(h);
+        return h;
+     }
+
+     blankSpaces(first);
+
+     var coords = getAbsolutePos(x0, y0);
+
+     var hexToMove = getHex(x0+amount, y0);
+     window.setTimeout (function () {
+         if (!hexToMove) {
+            hexToMove = createHex(x0,y0);
+        } else {
+          hexToMove.position.x = coords.x;
+          hexToMove.position.y = coords.y;
+        }
+     }, 300);
+
+
+     marked = [];
+   }
+
+tool.minDistance = 10;
+tool.maxDistance = 45;
+
+var path;
+var dragging = false;
+
+
+function onMouseDown(event) {
+    dragging = true;
+
+
+    path = new Path();
+    path.fillColor = {
+        hue: 1,
+        saturation: 1,
+        brightness: 0
+    };
+
+    path.add(event.point);
+}
+
+function onMouseDrag(event) {
+    var step = event.delta / 2;
+    step.angle += 90;
+    
+    var top = event.middlePoint + step;
+    var bottom = event.middlePoint - step;
+    
+    path.add(top);
+    path.insert(0, bottom);
+    path.smooth();
+}
+
+function onMouseUp(event) {
+
+    path.add(event.point);
+    path.closed = true;
+    path.smooth();
+    path.remove();
+    dragging = false;
+    
+    removeFromBoard();
+}
+
+
+    </script>
+
+    </body>
+</html>

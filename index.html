@@ -12,6 +12,8 @@
 
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="css/hex.css">
+
         <script type="text/javascript" src="js/vendor/modernizr-2.8.3.min.js"></script>
         <script type="text/javascript" src="script/dist/paper-full.js"></script>
     </head>
@@ -37,12 +39,285 @@
 
     <script type="text/paperscript" canvas="myCanvas">
 
-        var canvas = document.getElementById('myCanvas');
-        // Create an empty project and a view for the canvas:
-       // paper.setup(canvas);
 
-        window.canvas = canvas;
-        window.paper = paper;
+        /**
+            @param i - number in the row
+            @param rownumber
+            @param xoffset
+        **/
+
+        function getHexCoordinate(i, rownumber, xoffset) {
+
+            // The y coordinate always corresponds directly to the row number
+            // the x coordinate decreases by 1 for every row
+            // assuming the new block is directly Southwest of the corresponding block number
+            // if it is not directly southwest, use xoffset to adjust it
+
+            x = i - rownumber + xoffset;
+            return { x : x , y: rownumber };
+        }
+
+
+
+        var Game = function (radius, generator) {
+            var game = this;
+            this.radius = radius;
+            this.normal_length = Math.sqrt(radius*radius - (radius/2) * (radius/2));
+
+            this.spawnHex = function () {
+
+                var colors = [new Color(1,.3,.3), new Color (.3,1,.3), new Color(.3,.3,1), new Color(1,1,.3), new Color(1,.3,1)];
+
+                var color = Math.floor(Math.random()*colors.length);
+
+                var shape = new Path.RegularPolygon(new Point(0, 0), 6, radius);
+                shape.fillColor = colors[color];
+                shape.strokeColor = new Color (0,0,0)
+                shape.strokeWidth = 2;
+
+                shape.shadowColor = new Color(0, 0, 0);
+                shape.shadowBlur = 12;
+                shape.shadowOffset = new Point(5, 5);
+                shape.name = 'hexagon';
+                var text = new paper.PointText(10,30).rotate(-30);
+                text.name = 'text';
+
+                text.content = '';
+                text.opacity = 0.8;
+
+                var hexagon = new paper.Group();    
+                hexagon.addChild(shape);  
+                hexagon.addChild(text);         
+
+                hexagon.onMouseDown = function (e) {
+                   game.board.mark(hexagon);
+                }
+                hexagon.onMouseEnter = function (e){
+                  if (dragging) {
+                    game.board.mark(hexagon);
+                  }
+                };
+                
+                hexagon._type = 'P';
+
+                return hexagon; 
+            };
+
+
+            var Hole = function () {
+                this._type  = 'H';
+                return this;
+            }            
+
+            var Board = function (generator) {
+
+                var board = this;
+
+                /* rewrite this fugly thing */
+                this.getAbsolutePosition = function (numhexagons, x,y) {
+                  var offsetfromleft = game.normal_length + game.normal_length * (7 - numhexagons);
+                  return { x : offsetfromleft + game.normal_length*2*x, y: radius + radius*1.5*y};
+                }
+
+                this.isInside = function (i,j) {
+                    return this.slots[j] && this.slots[j][i];
+                }
+
+                this.isOutside = function (i,j) {
+                    return !this.isInside(i,j);
+                }
+
+                this.isHole = function (i,j) {
+                    if (this.isOutside(i,j)) throw "Utafor, næpskrell";
+                    var obj = this.slots[j] && this.slots[j][i]; 
+                    return obj.type == 'H';
+                }
+
+                this.isTile = function (i,j) {
+                    if (this.isOutside(i,j)) throw "Utafor, næpskrell";
+                    var obj = this.slots[j] && this.slots[j][i];
+                    if (!obj) throw "No object defined at " + i + ' ' + j;
+                    return obj._type == 'P';
+                };
+
+
+                this.getTileAt = function (i,j) {
+                    if (board.isTile(i,j)) {
+                        return this.slots[j][i];
+                    }
+                    throw 'Not a tile at ' + i + ' ' + j;
+                }
+
+                this.insertAt = function (i, j, obj) {
+                    if (this.isOutside(i,j)) throw "Utafor, næpskrell";  
+                    if (!obj || !(obj._type == 'P' || obj._type == 'H')) {
+                        throw 'Must be a polygon or hole';
+                    }
+
+                    var old = this.slots[j][i];
+                    obj.position = old.position;
+                    obj._i = i;
+                    obj._j = j;
+                    if (obj._type == 'P') 
+                        obj.getItem({name : 'text'}).content = i + ',' + j;
+                    this.slots[j][i] = obj;
+                    return obj;
+                }
+
+                this.removeTileAt = function (i,j) {
+                    var tile = this.getTileAt(i,j);
+                   // tile.remove();
+                    var hole = this.insertAt (i,j, new Hole());
+                    board.holes.push(hole);
+                    return tile;
+                }
+
+
+                this.getMarked = function () {
+                    return board.marked;
+                }
+
+                this.removeMarked = function () {
+
+                    if (board.marked.length < 2) {
+                        throw "Minst to brikker";
+                    }
+
+                    var A = board.marked [board.marked.length-1];
+                    var B = board.marked [board.marked.length-2];
+
+                    var dir = board.getDirection(A,B);
+                    dir = board.getReverseDirection(dir);
+
+                    $(board.marked).each(function (i,e) {
+                        board.removeTileAt(e._i, e._j)
+                     });
+                    board.marked = [];
+
+                    board.fillBoard (dir);
+                };
+
+                this.mark = function (tile) {
+                    tile.fillColor = new Color(.7,.7,.3);
+                    if (!tile._marked) {
+                        tile._marked = true;
+                        board.marked.push (tile);                       
+                    }
+                }
+
+                this.getDirection = function (obj, obj2) {
+                   var dx = obj._i - obj2._i;
+                   var dy = obj._j - obj2._j;
+                   return {x: dx, y: dy};
+                }
+
+                this.getReverseDirection = function (dir) {
+                    return inverteddir = {x: -dir.x, y: - dir.y};
+                }
+
+
+                this.fillBoard = function (direction) {
+
+                    var holes = board.getHoles();
+
+                    var doFill = function (hole) {
+
+                        var i = hole._i;
+                        var j = hole._j;
+
+                        var tile = findFirstTile(i,j, direction);
+                        if (tile) {
+                            board.removeTileAt(tile._i,tile._j);
+                        } else {
+                            tile = game.spawnHex();
+                        }
+
+                        board.insertAt(i,j, tile);
+
+                        if (holes.length) {
+                            return doFill (holes.pop());
+                        } else {
+                            holes = board.getHoles();
+                            if (holes.length)
+                                return doFill (holes.pop());
+                            return;
+                        }
+
+
+                    }
+                    doFill(holes.pop());
+                }
+
+
+                var findFirstTile = function (i, j, dir) {
+      
+                   var i = i + dir.x;
+                   var j = j + dir.y;
+
+                   if (board.isOutside(i,j)) {
+                     return null;
+                   }
+
+                   if (board.isTile(i,j)) {
+                     return board.getTileAt(i,j);
+                   }
+
+                   return findFirstTile(i,j, dir);
+                }
+
+
+                this.getHoles = function () {
+                    return this.holes;
+                }
+
+
+                this.holes = [];
+                this.tiles = [];
+                this.marked = [];
+
+                this.slots = {};
+
+                var lastrowlength = generator[0];
+                for (var y =0; y<generator.length; y++) {
+                    var numhexagons = generator[y];
+                    for (var x = 0; x<numhexagons; x++ ) {
+                        var hex = game.spawnHex();
+                        var A = numhexagons - lastrowlength;
+                        var offset = 0;
+                        /* Dette må forstås altså */
+                        if (A<0) {
+                            offset = 7 - numhexagons + A + 1;
+                        }
+
+                        var i = x - y + offset;
+                        var j = y;
+
+                        if (this.slots[j] == undefined) {
+                            this.slots[j] = {};
+                        }
+                        this.slots[j][i] = hex;
+
+                        hex.getItem({name : 'text'}).content = i + ',' + j;
+
+                        hex._i = i;
+                        hex._j = j;
+                        hex._type = 'P';
+
+                        var pos = this.getAbsolutePosition(numhexagons, x,y);
+                        hex.position = pos;
+                    } 
+                    lastrowlength = numhexagons;
+                }
+            }
+            this.board = new Board(generator);
+        };
+
+        var game = new Game(40, [4,5,6,7,6,5,4]);
+
+
+
+/*
+
 
 
     var radius = 40;
@@ -150,7 +425,7 @@
         var board = [];
         var lastrowlength = generator[0];
 
-        for (var y =0; y<generator.length; y++) {
+        for (var y =0; y<generator.length; y++) { break;
           
           xoff = edge_distance;
           var numhexagons = generator[y];
@@ -223,7 +498,6 @@
 
    window.Grid = Grid;
 
-
    function mark(hexagon) {
      hexagon.fillColor = new Color(.7,.7,.3);
 
@@ -256,6 +530,7 @@
      marked = [];
    }
 
+*/
 
   function createHex () {
   
@@ -392,7 +667,7 @@ function onMouseUp(event) {
     path.remove();
     dragging = false;
     
-    removeFromBoard();
+    game.board.removeMarked();
 }
 
 

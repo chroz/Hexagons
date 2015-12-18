@@ -19,13 +19,13 @@
     </head>
     <body>
      <!-- Define inlined PaperScript associate it with myCanvas -->
-        <div id='brickinfo' style='position: absolute; right: 10px; top: 10px; border: 1px solid black;'>
+        <div id='colorpool' style='position: absolute; right: 10px; top: 10px; border: 1px solid black;'>
           <ul>
-            <li>Red: <span id='color_0'>0</span></li> 
-            <li>Green: <span id='color_1'>0</span></li> 
-            <li>Yellow: <span id='color_2'>0</span></li> 
-            <li>Blue: <span id='color_3'>0</span></li> 
-            <li>Purple: <span id='color_4'>0</span></li>
+            <li>Red: <input id='color_0' value='0'/></li> 
+            <li>Green: <input id='color_1' value='0'/></li> 
+            <li>Blue: <input id='color_2' value='0'/></li> 
+            <li>Yellow: <input id='color_3' value='0'/></li> 
+            <li>Purple: <input id='color_4' value='0'/></li>
           </ul>
           <input type='text' id='symbol' value= 'X'/>
           <button id='clear'>Clear</button>
@@ -49,9 +49,17 @@
 
     <script type="text/paperscript" canvas="myCanvas">
 
-    $('#clear').on('click', function(e){
-      game.resetColorPool();
-    });
+        $('#clear').on('click', function(e){
+          game.resetColorPool();
+        });
+
+        $('#colorpool input').on('change keyup blur', function(e){
+            var id = e.currentTarget.id.slice(-1);
+            var val = e.currentTarget.value;
+            console.log (id);
+            game.colorpool[id] = +val;
+        });
+
         /**
             @param i - number in the row
             @param rownumber
@@ -80,18 +88,18 @@
 
             this.resetColorPool = function () {
               game.colorpool = [0,0,0,0,0];
-              $('#brickinfo li span').html(0);
+              $('#colorpool li input').val(0);
             }
 
             this.addColor = function(color, amount) {
                 game.colorpool[color] += amount;
-                $('#color_' + color).html(game.colorpool[color]);
+                $('#color_' + color).val(game.colorpool[color]);
             };
 
             this.spawnTile = function () {
 
                 var colors = [
-                  new Color(1,.3,.3), new Color (.3,1,.3), new Color(.3,.3,1), new Color(1,1,.3), new Color(1,.3,1)
+                  new Color(.8,.3,.1), new Color (.3,.8,.1), new Color(.3,.1,.8), new Color(.8,.8,.1), new Color(.8,.1,.8)
                 ];
 
                 var color = Math.floor(Math.random()*colors.length);
@@ -114,14 +122,13 @@
                 var symbol = new paper.PointText(0,0);
 
                 symbol.name = 'symbol';
-                symbol.content = ' ' ;
+                symbol.content = '' ;
                 symbol.fontSize = 20;
 
                 var tile = new paper.Group();    
                 tile.addChild(shape);  
                 tile.addChild(text);         
                 tile.addChild(symbol);
-
 
                 tile.onMouseDown = function (e) {
                    game.board.mark(tile);
@@ -139,6 +146,10 @@
                 tile.setSymbol = function (symbol) {
                     this.getItem({name : 'symbol'}).content = symbol;
                 } 
+
+                tile.hasSymbol = function () {
+                    return !!this.getItem({name : 'symbol'}).content.length;
+                }
 
                 return tile; 
             };
@@ -221,12 +232,7 @@
                 this.removeMarked = function () {
 
                     if (board.marked.length < 2) {
-                        var t = board.getTileAt(
-                            board.marked[0]._i, board.marked[0]._j);
-                        t.setSymbol($('#symbol').val());
-                        board.marked = [];
-                        return;
-
+                        throw ('koko')
                     }
 
                     var A = board.marked [board.marked.length-1];
@@ -389,7 +395,6 @@ var dragging = false;
 function onMouseDown(event) {
     dragging = true;
 
-
     path = new Path();
     path.fillColor = {
         hue: 1,
@@ -419,7 +424,20 @@ function onMouseUp(event) {
     path.smooth();
     path.remove();
     dragging = false;
-    
+
+    if (game.board.marked.length == 1) {
+        var m = game.board.marked.pop();
+        var t = game.board.getTileAt(m._i, m._j);
+        t._marked = false;
+        var s = '';
+        if (!t.hasSymbol()) {
+            s = $('#symbol').val();
+        }
+        t.setSymbol(s);
+        return false;
+    }
+
+
     game.board.removeMarked();
 }
 

@@ -118,12 +118,13 @@
                 text.content = '';
                 text.opacity = 0.8; 
 
-                var symbol = new paper.PointText(-25,15);
+                var symbol = new paper.PointText(0,0);
 
                 symbol.fontFamily = 'mythical__hoplite_noodgiesRg';
                 symbol.name = 'symbol';
                 symbol.content = '' ;
-                symbol.fontSize = 50;
+                symbol.fontSize = 60;
+
 
                 var tile = new paper.Group();    
                 tile.addChild(shape);  
@@ -138,13 +139,22 @@
                     game.board.mark(tile);
                   }
                 };
-
-                
+    
                 tile._type = 'P';
                 tile._color = color;
 
                 tile.setSymbol = function (symbol) {
-                    this.getItem({name : 'symbol'}).content = symbol;
+                    var s = tile.getItem({name : 'symbol'});
+                    s.content = symbol;
+
+                    var xoff = s.bounds._width / 2;
+                    var yoff = s.bounds._height / 4; // why divide by 4? why does this work?
+
+                    var x = s.point.getX() - xoff;
+                    var y = s.point.getY() + yoff;
+
+                    s.point = new Point(x,y);
+
                 } 
 
                 tile.hasSymbol = function () {
@@ -374,8 +384,8 @@
             }
             this.board = new Board(generator);
 
-            this.board.getTileAt(-3,3).setSymbol('C');
-            this.board.getTileAt(3,3).setSymbol('C');
+            this.board.getTileAt(-3,3).setSymbol('d');
+            this.board.getTileAt(3,3).setSymbol('d');
           //  this.board.lockTileAt(3,3,)
 
             window.game = game;

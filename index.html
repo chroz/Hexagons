@@ -165,8 +165,11 @@
                 }
 
                 this.removeTileAt = function (i,j) {
+
+                    console.log ('removing tile at ' + i + ' ' + j);
+
                     var tile = this.getTileAt(i,j);
-                   // tile.remove();
+                  //  tile.remove();
                     var hole = this.insertAt (i,j, new Hole());
                     board.holes.push(hole);
                     return tile;
@@ -190,7 +193,8 @@
                     dir = board.getReverseDirection(dir);
 
                     $(board.marked).each(function (i,e) {
-                        board.removeTileAt(e._i, e._j)
+                        var t = board.removeTileAt(e._i, e._j);
+                        t.remove();
                      });
                     board.marked = [];
 
@@ -215,6 +219,11 @@
                     return inverteddir = {x: -dir.x, y: - dir.y};
                 }
 
+                this.redraw = function () {
+                    paper.project._needsUpdate = true;
+                    paper.project.view.update();
+                };
+
 
                 this.fillBoard = function (direction) {
 
@@ -231,17 +240,20 @@
                         } else {
                             tile = game.spawnHex();
                         }
+                        
+                        window.setTimeout(function () {
+                            board.insertAt(i,j, tile);
+                            board.redraw();
 
-                        board.insertAt(i,j, tile);
-
-                        if (holes.length) {
-                            return doFill (holes.pop());
-                        } else {
-                            holes = board.getHoles();
-                            if (holes.length)
+                            if (holes.length) {
                                 return doFill (holes.pop());
-                            return;
-                        }
+                            } else {
+                                holes = board.getHoles();
+                                if (holes.length)
+                                    return doFill (holes.pop());
+                                return;
+                            }
+                        }, 300);
 
 
                     }
@@ -531,7 +543,7 @@
    }
 
 */
-
+/*
   function createHex () {
   
     var h = hex();
@@ -625,7 +637,7 @@
     }
 
    }
-
+*/
 tool.minDistance = 10;
 tool.maxDistance = 45;
 

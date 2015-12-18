@@ -19,7 +19,15 @@
     </head>
     <body>
      <!-- Define inlined PaperScript associate it with myCanvas -->
-
+        <div id='brickinfo' style='position: absolute; right: 10px; top: 10px; border: 1px solid black;'>
+          <ul>
+            <li>Red: <span id='color_0'>0</span></li> 
+            <li>Green: <span id='color_1'>0</span></li> 
+            <li>Yellow: <span id='color_2'>0</span></li> 
+            <li>Blue: <span id='color_3'>0</span></li> 
+            <li>Purple: <span id='color_4'>0</span></li>
+          </ul>
+        </div>
         <canvas id="myCanvas" resize width="600" height="600"></canvas>
 
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
@@ -64,9 +72,19 @@
             this.radius = radius;
             this.normal_length = Math.sqrt(radius*radius - (radius/2) * (radius/2));
 
+            this.colorpool = [0,0,0,0,0];
+
+            this.addColor = function(color, amount) {
+                game.colorpool[color] += amount;
+                $('#color_' + color).html(game.colorpool[color]);
+            };
+
+
             this.spawnHex = function () {
 
-                var colors = [new Color(1,.3,.3), new Color (.3,1,.3), new Color(.3,.3,1), new Color(1,1,.3), new Color(1,.3,1)];
+                var colors = [
+                  new Color(1,.3,.3), new Color (.3,1,.3), new Color(.3,.3,1), new Color(1,1,.3), new Color(1,.3,1)
+                ];
 
                 var color = Math.floor(Math.random()*colors.length);
 
@@ -97,8 +115,12 @@
                     game.board.mark(hexagon);
                   }
                 };
+                hexagon.onDoubleClick = function (e) {
+                    console.log ('asd')
+                }
                 
                 hexagon._type = 'P';
+                hexagon._color = color;
 
                 return hexagon; 
             };
@@ -166,7 +188,6 @@
 
                 this.removeTileAt = function (i,j) {
 
-                    console.log ('removing tile at ' + i + ' ' + j);
 
                     var tile = this.getTileAt(i,j);
                   //  tile.remove();
@@ -194,10 +215,11 @@
 
                     $(board.marked).each(function (i,e) {
                         var t = board.removeTileAt(e._i, e._j);
+                        var color = e._color;
+                        game.addColor(color,1);
                         t.remove();
                      });
                     board.marked = [];
-
                     board.fillBoard (dir);
                 };
 
@@ -327,317 +349,6 @@
         var game = new Game(40, [4,5,6,7,6,5,4]);
 
 
-
-/*
-
-
-
-    var radius = 40;
-    
-    var COLOR1 = 0;
-    var COLOR2 = 1;
-    var COLOR3 = 2;
-    var COLOR4 = 3;
-    var COLOR5 = 5; 
-
-    var colors = [new Color(1,0,0), new Color (0,1,0), new Color(0,0,1), new Color(1,1,0), new Color(1,0,1)];
-   
-
-    function hex () {
-  
-      var hexagon = new Path.RegularPolygon(new Point(0, 0), 6, radius);
-         hexagon.fillColor = '#e9e9ff';
-      return hexagon; 
-
-    }
-
-    var width = 7;
-    var height = 7; 
-
-    var marked = [];
-    var board = [];
-
-    var x = radius;
-    var y = radius;
-
-    // Avstand fra sentrum til kanten på hexagonet (ikke hjørnet)
-     
-    var edge_distance = Math.sqrt(radius*radius - (radius/2) * (radius/2));
-
-    var xoff = edge_distance;
-    var yoff = radius;
-
-    var grid_max_width = 7;
-
-    function getAbsolutePos(numhexagons, x,y) {
-      
-      var offsetfromleft = edge_distance + edge_distance * (grid_max_width - numhexagons);
-      
-      var xoff = edge_distance*offsetfromleft;
-
-      return { x : offsetfromleft + edge_distance*2*x, y: yoff + radius*1.5*y};
-    }
-
-
-    function getGridReference(celloffset,x,y) {
-        x = x - y;
-        x += celloffset;
-        return { x : x , y: y };
-    }
-
-    var Grid = {};
-
-
-
-    function generateGrid () {
-
-        var generator = [4,5,6,7,6,5,4];
-
-
-        var _grid = {};
-
-        _grid.board = [];
-
-        _grid.getAbsolutePosition = function (coords) {
-            var pos;
-            $(this.board).each(function (i,e) {
-                if (e.coord.x == coords.x && e.coord.y == coords.y) {
-                    pos = e.abspos;
-                    return false;
-                }
-            });
-            return pos;
-        }
-
-        _grid.getTile = function (x,y) { // Stygg funksjon, fikse senere din tosk
-          //  console.log ('gettile '+ x + ' ' +y)
-
-            var self = this;
-            if ( y<0 || y >= generator.length) {// console.log ('ycoord off')
-                return false;
-            }
-            for (var i = 0; i<self.board.length; i++) {
-                var slot = self.board[i];
-
-                if (slot === undefined) {
-                    continue;
-                }
-            //    console.log (slot);
-                if (slot.coord.x == x && slot.coord.y == y) {
-                    if (slot.hexagon) return slot.hexagon;
-                    else return false;
-//                    return slot.hexagon;
-                }
-            }
-
-            return false;
-        };
-
-
-        var board = [];
-        var lastrowlength = generator[0];
-
-        for (var y =0; y<generator.length; y++) { break;
-          
-          xoff = edge_distance;
-          var numhexagons = generator[y];
-
-          for (var x = 0; x<numhexagons; x++ ) {
-
-            var h = hex();
-          
-            var A = grid_max_width - numhexagons;
-            var B = numhexagons - lastrowlength;
-
-            var offset = 0;
-            if (B<0) {
-                offset = A + B + 1;
-            }
-
-
-            h.gridref = getGridReference(offset, x,y);
-            var pos = getAbsolutePos(numhexagons, x,y);
-            
-            h.position.x = pos.x;
-            h.position.y = pos.y;
-
-            var entry = {
-                coord : h.gridref,
-                abspos: pos,
-                hexagon : h
-            };
-
-            board.push(entry); 
-
-            h.x = x;
-            h.y = y;
-
-            h.strokeColor = new Color (0,0,0)
-            h.strokeWidth = 2;
-            h.color = Math.floor(Math.random()*colors.length);
-            h.fillColor = colors[h.color]; 
-            h.shadowColor = new Color(0, 0, 0);
-            h.shadowBlur = 12;
-            h.shadowOffset = new Point(5, 5);
-
-            var text = new PointText({
-                point: [pos.x,pos.y],
-                content: h.gridref.x + ',' + h.gridref.y,
-                fillColor: 'black',
-                fontFamily: 'Courier New',
-                fontWeight: 'bold',
-                fontSize: 12
-            });
-
-            h.onMouseDown = function (e) {
-              mark(this);
-            }
-        
-            h.onMouseEnter = function (e){
-              if (dragging) {
-                mark(this);
-              }
-            };
-
-         } 
-         lastrowlength = numhexagons;
-       }
-       _grid.board = board;
-       return _grid;
-   }
-   
-   var Grid = generateGrid();
-
-   window.Grid = Grid;
-
-   function mark(hexagon) {
-     hexagon.fillColor = new Color(.7,.7,.3);
-
-     for (var i =0; i<marked.length; i++) {
-        if (marked[i] == hexagon) return false;
-     }
-
-     marked.push (hexagon);
-   }
-
-   function removeFromBoard () {
-
-
-     var holes = [];
-
-     $(marked).each(function (i,e) {
-       e.remove();
-       holes.push(e.gridref);
-     });
-
-    var a = marked[marked.length-1];
-    var b = marked[marked.length-2];
-
-    var dir = getDirection (a, b);
-    var inverteddir = {x: -dir.x, y: - dir.y};
-    
-    //Her kan en slenge logikk for poeng, antall brikker, bla blah
-    fillBoard(holes, inverteddir);
-
-     marked = [];
-   }
-
-*/
-/*
-  function createHex () {
-  
-    var h = hex();
-    //Grid.board.push(h);
-
-    h.strokeColor = new Color (0,0,0)
-    h.strokeWidth = 2;
-    h.color = Math.floor(Math.random()*colors.length);
-    h.fillColor = colors[h.color]; 
-    h.shadowColor = new Color(0, 0, 0);
-    h.shadowBlur = 12;
-    h.shadowOffset = new Point(5, 5);
-
-
-    h.onMouseDown = function (e) {
-      mark(this);
-    }
-
-    h.onMouseEnter = function (e){
-      if (dragging) {
-        mark(this);
-      }
-    };
-
-    return h;
-  }
- 
-        
-    function getDirection(h1, h2) {
-      var dx = h1.gridref.x - h2.gridref.x;
-      var dy = h1.gridref.y - h2.gridref.y;
-
-     return {x: dx, y: dy};
-    }
- 
-
-   function fillBoard(holes, filldirection) {
-
-
-    var doFill = function (hole) {
-
-
-            var tile = findTile(hole, filldirection);
-            var position = Grid.getAbsolutePosition(hole);
-
-
-            if (!tile) { // utafor kartet, siste tile.
-               var newHex = createHex();
-               newHex.gridref  = hole;
-               newHex.position = position;
-                paper.project._needsUpdate = true;
-                paper.project.view.update();
-            } else {
-                var temp = {x : tile.gridref.x, y: tile.gridref.y};
-
-               // console.log ('moving tile to ' + hole.x + ' ' + hole.y );
-
-                tile.gridref  = hole;
-                tile.position = position;
-
-              //  console.log ('generating hole at ' + temp.x + ' ' + temp.y); 
-                holes.unshift(temp);
-            }
-
-            if (holes.length) {
-                 window.setTimeout (function () {
-                    paper.project._needsUpdate = true;
-                    paper.project.view.update();
-                   doFill(holes.pop());
-                 }, 200);
-           }
-            
-    }
-    //Begynner med siste hexagon i lista
-    doFill(holes.pop());
-
-    function findTile(hole, dir) {
-       // Gå i gridet i spesifisert retning 
-
-       var x = hole.x + dir.x;
-       var y = hole.y + dir.y;
-
-
-       for (var i=0; i< holes.length; i++) {
-            var hole = holes[i];
-            if (hole.x == x && hole.y == y) {
-                return findTile(hole, dir);
-            }
-        }
-         return Grid.getTile(x,y);
-    }
-
-   }
-*/
 tool.minDistance = 10;
 tool.maxDistance = 45;
 

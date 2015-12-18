@@ -139,12 +139,26 @@
                     game.board.mark(tile);
                   }
                 };
+
+                tile.isLocked = function () {
+                    return !!this._islocked;
+                }
+
+                tile.lock = function (unlock) {
+                    this._islocked = (unlock !== false);
+                    return this;
+                }
+
+                tile.setColor = function (color) {
+                    this.fillColor = color;
+                    return this;
+                }
     
                 tile._type = 'P';
                 tile._color = color;
 
                 tile.setSymbol = function (symbol) {
-                    var s = tile.getItem({name : 'symbol'});
+                    var s = this.getItem({name : 'symbol'});
                     s.content = symbol;
 
                     var xoff = s.bounds._width / 2;
@@ -154,6 +168,7 @@
                     var y = s.point.getY() + yoff;
 
                     s.point = new Point(x,y);
+                    return this;
 
                 } 
 
@@ -234,6 +249,18 @@
                     return tile;
                 }
 
+                this.lockTileAt = function (i,j) {
+                    var tile = this.getTileAt(i,j);
+                    tile.lock();
+                    return tile;
+                }
+
+                this.unlockTileAt = function (i,j) {
+                    var tile = this.getTileAt(i,j);
+                    tile.lock(false);
+                    return tile;
+                }
+
 
                 this.getMarked = function () {
                     return board.marked;
@@ -262,6 +289,9 @@
                 };
 
                 this.mark = function (tile) {
+
+                    if (tile._islocked) return
+
                    // tile.fillColor = new Color(.7,.7,.3);
                     if (!tile._marked) {
                         tile._marked = true;
@@ -295,14 +325,15 @@
                         var j = hole._j;
 
                         var tile = findFirstTile(i,j, direction);
-                        if (tile) {
+                        if (tile && !tile.isLocked()) {
                             board.removeTileAt(tile._i,tile._j);
                         } else {
                             tile = game.spawnTile();
                         }
                         
                         window.setTimeout(function () {
-                            board.insertAt(i,j, tile);
+                            if (!tile.isLocked())
+                              board.insertAt(i,j, tile);
                             board.redraw();
 
                             if (holes.length) {
@@ -384,10 +415,9 @@
             }
             this.board = new Board(generator);
 
-            this.board.getTileAt(-3,3).setSymbol('d');
-            this.board.getTileAt(3,3).setSymbol('d');
-          //  this.board.lockTileAt(3,3,)
-
+            var t1 = this.board.getTileAt(-3,3).lock().setSymbol('d');
+            var t2 = this.board.getTileAt(3,3).lock().setSymbol('d');
+            
             window.game = game;
 
         };

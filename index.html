@@ -27,6 +27,7 @@
             <li>Blue: <span id='color_3'>0</span></li> 
             <li>Purple: <span id='color_4'>0</span></li>
           </ul>
+          <input type='text' id='symbol' value= 'X'/>
           <button id='clear'>Clear</button>
         </div>
         <canvas id="myCanvas" resize width="600" height="600"></canvas>
@@ -77,15 +78,15 @@
 
             this.colorpool = [0,0,0,0,0];
 
-            this.addColor = function(color, amount) {
-                game.colorpool[color] += amount;
-                $('#color_' + color).html(game.colorpool[color]);
-            };
-
             this.resetColorPool = function () {
               game.colorpool = [0,0,0,0,0];
               $('#brickinfo li span').html(0);
             }
+
+            this.addColor = function(color, amount) {
+                game.colorpool[color] += amount;
+                $('#color_' + color).html(game.colorpool[color]);
+            };
 
             this.spawnTile = function () {
 
@@ -108,11 +109,19 @@
                 text.name = 'text';
 
                 text.content = '';
-                text.opacity = 0.8;
+                text.opacity = 0.8; 
+
+                var symbol = new paper.PointText(0,0);
+
+                symbol.name = 'symbol';
+                symbol.content = ' ' ;
+                symbol.fontSize = 20;
 
                 var tile = new paper.Group();    
                 tile.addChild(shape);  
                 tile.addChild(text);         
+                tile.addChild(symbol);
+
 
                 tile.onMouseDown = function (e) {
                    game.board.mark(tile);
@@ -126,12 +135,9 @@
                 
                 tile._type = 'P';
                 tile._color = color;
-                tile.addMarker = function (symbol) {
-                    var text = new paper.PointText(0,0);
-                    text.name = 'symbol';
-                    text.content = 'X';
-                    text.opacity = 1;
-                    tile.addChild (text);
+
+                tile.setSymbol = function (symbol) {
+                    this.getItem({name : 'symbol'}).content = symbol;
                 } 
 
                 return tile; 
@@ -200,7 +206,6 @@
 
                 this.removeTileAt = function (i,j) {
 
-
                     var tile = this.getTileAt(i,j);
                   //  tile.remove();
                     var hole = this.insertAt (i,j, new Hole());
@@ -216,7 +221,12 @@
                 this.removeMarked = function () {
 
                     if (board.marked.length < 2) {
-                        throw "Minst to brikker";
+                        var t = board.getTileAt(
+                            board.marked[0]._i, board.marked[0]._j);
+                        t.setSymbol($('#symbol').val());
+                        board.marked = [];
+                        return;
+
                     }
 
                     var A = board.marked [board.marked.length-1];
@@ -236,7 +246,7 @@
                 };
 
                 this.mark = function (tile) {
-                    tile.fillColor = new Color(.7,.7,.3);
+                   // tile.fillColor = new Color(.7,.7,.3);
                     if (!tile._marked) {
                         tile._marked = true;
                         board.marked.push (tile);                       
@@ -328,6 +338,7 @@
                     var numhexagons = generator[y];
                     for (var x = 0; x<numhexagons; x++ ) {
                         var hex = game.spawnTile();
+
                         var A = numhexagons - lastrowlength;
                         var offset = 0;
 
@@ -358,8 +369,10 @@
             }
             this.board = new Board(generator);
 
-            var t = this.board.getTileAt(-2,2);
-            console.log (t);
+            this.board.getTileAt(-3,3).setSymbol(10);
+            this.board.getTileAt(3,3).setSymbol(10);
+
+            window.game = game;
 
         };
 

@@ -56,7 +56,6 @@
         $('#colorpool input').on('change keyup blur', function(e){
             var id = e.currentTarget.id.slice(-1);
             var val = e.currentTarget.value;
-            console.log (id);
             game.colorpool[id] = +val;
         });
 
@@ -303,7 +302,7 @@
                                     return doFill (holes.pop());
                                 return;
                             }
-                        }, 300);
+                        }, 100);
 
 
                     }

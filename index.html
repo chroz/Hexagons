@@ -9,7 +9,7 @@
 
         <link rel="apple-touch-icon" href="apple-touch-icon.png">
         <!-- Place favicon.ico in the root directory -->
-
+        <link rel="stylesheet" href="css/fonts/mythical.css" type="text/css" charset="utf-8" />
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/main.css">
         <link rel="stylesheet" href="css/hex.css">
@@ -118,11 +118,12 @@
                 text.content = '';
                 text.opacity = 0.8; 
 
-                var symbol = new paper.PointText(0,0);
+                var symbol = new paper.PointText(-25,15);
 
+                symbol.fontFamily = 'mythical__hoplite_noodgiesRg';
                 symbol.name = 'symbol';
                 symbol.content = '' ;
-                symbol.fontSize = 20;
+                symbol.fontSize = 50;
 
                 var tile = new paper.Group();    
                 tile.addChild(shape);  
@@ -304,7 +305,6 @@
                             }
                         }, 100);
 
-
                     }
                     doFill(holes.pop());
                 }
@@ -374,8 +374,9 @@
             }
             this.board = new Board(generator);
 
-            this.board.getTileAt(-3,3).setSymbol(10);
-            this.board.getTileAt(3,3).setSymbol(10);
+            this.board.getTileAt(-3,3).setSymbol('C');
+            this.board.getTileAt(3,3).setSymbol('C');
+          //  this.board.lockTileAt(3,3,)
 
             window.game = game;
 
